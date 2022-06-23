@@ -19,7 +19,7 @@ public final class Interfaz extends javax.swing.JFrame {
     HashMap<String, Integer> materialesUtilizados = new HashMap<>();
     HashMap<String, Integer> materiales = new HashMap<>();
     int total=0;
-    int luz=0;
+    int luz=499;
     String[] listado= new String[100];
     String[] listadoConPrecio= new String[100];
     String[] listadoUsado= new String[100];
