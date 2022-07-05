@@ -33,7 +33,7 @@ public final class Interfaz extends javax.swing.JFrame {
     public Interfaz() throws IOException {
         initComponents();
         this.setVisible(true);
-        
+        //dsdasd
         File mat = new File("Materiales");
         mat.mkdirs();
         File txtMateriales = new File("Materiales/Materiales.txt");
