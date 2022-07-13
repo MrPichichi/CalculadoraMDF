@@ -18,12 +18,9 @@ import javax.swing.ImageIcon;
 import javax.swing.JOptionPane;
 
 public final class Interfaz extends javax.swing.JFrame {
-    
-    HashMap<String, HashMap> hashProductos = new HashMap<>();//matriz de productos
-    HashMap<String, Integer[]> hashUtilizados = new HashMap<>();//Matriz de materiales usados
-    HashMap<String, Integer> hashMAT = new HashMap<>();//matriz materiales  
-    HashMap<String, Integer> hashMDF = new HashMap<>();//matriz Mdf
-    
+    Material mate;
+    Producto prod;
+    MDF mdf;
     int costo=0;
     int totalMDF=0;
     int total=0;
@@ -39,31 +36,35 @@ public final class Interfaz extends javax.swing.JFrame {
     int valorMdfGanancia=0;
     int val=0;
     int inversionCorte=0;
+    
     boolean update=false;
     boolean load=false;
-    String selected="";
     boolean editMDF=false;
     boolean editMAT=false;
+    
+    String selected="";
+    
+    HashMap<String, Producto> hashProductos = new HashMap<>();//matriz de productos
+    HashMap<String, Object> hashUtilizados = new HashMap<>();//Matriz de materiales usados
+    HashMap<String, Material> hashMAT = new HashMap<>();//matriz materiales  
+    HashMap<String, MDF> hashMDF = new HashMap<>();//matriz Mdf
     
     Integer[] datos= new Integer[3];
     Integer[] dificultad= new Integer[3];
      
     String[] listaVisualCompleta= new String[100];
     String[] ListaVisualCompletaPrecio= new String[100];
+    String[] visualUsado= new String[100];
+    String[] visualUsadoPrecio= new String[100];
     
-    String[] lUsado= new String[100];
-    String[] lUPrecio= new String[100];
-    
-     ArrayList<String> listaMateriales= new ArrayList<>();
+    ArrayList<String> listaMateriales= new ArrayList<>();
     ArrayList<String> listaMDF= new ArrayList<>();
     ArrayList<String> trozo= new ArrayList<>();
-    
     ArrayList<String> listaCompleta= new ArrayList<>();
     ArrayList<String> listaCompletaPrecio= new ArrayList<>();
-    
     ArrayList<String> listaUsado= new ArrayList<>();
     ArrayList<String> listaUsadoPrecio= new ArrayList<>();
-    
+    ArrayList<Producto> listaProductos= new ArrayList<>();
     
     
     public Interfaz() throws IOException {
@@ -76,14 +77,20 @@ public final class Interfaz extends javax.swing.JFrame {
         
         File mat = new File("Materiales");
         mat.mkdirs();
+        File carpetaProductos = new File("Productos");
+        carpetaProductos.mkdirs();
+        
+        File carpetaMDF = new File("MDF");
+        carpetaMDF.mkdirs();
+        
         this.dificultad[0]=9000;
         this.dificultad[1]=10000;
         this.dificultad[2]=12000;
         
         this.porcentajeGanancia.setText("50");
         
-        load=true;
-        this.operarTxT();
+        this.importarMateriales();
+        this.importarMDF();
    
     }
     
@@ -101,9 +108,83 @@ public final class Interfaz extends javax.swing.JFrame {
         this.mdfPorcentaje=Integer.parseInt(this.visualMDFPrecio.getText());
         
     }
+      
+        //importa datos del txt o lo crea
+    public void importarMateriales(){
+        System.out.println("Operando material");
+        final File mat = new File("Materiales/Materiales.txt");
+        if(mat.exists()){
+            System.out.println("Importand!");
+            this.importarDatosMatariales(mat);
+            this.updateListas();
+            this.setTablasMateriales(); 
+            this.setTablaMDF();
+            System.out.println("Importado ok");
+        }else{
+            this.inicializarTXTMateriales();
+            System.out.println("Creando y cargando");
+            this.importarMateriales();
+        }
+    }
+    public void importarDatosMatariales(File f){
         
-    public void inicializarTXT(){
+        BufferedReader entrada = null; 
+                try { 
+                    entrada = new BufferedReader( new FileReader( f ) ); 
+                    String linea;
+                    String valor;
+                    this.hashMAT=new HashMap<>();
+                    while(entrada.ready()){ 
+                        linea = entrada.readLine();
+                        if(linea.equals("*")){
+                                //sET lUZ
+                                linea=entrada.readLine();
+                                this.luz=Integer.parseInt(linea);
+                                //SET tablas luz
+                                this.visualMDFLuz.setText(linea);
+                                System.out.println("Luz: "+linea );
+                                linea=entrada.readLine();
+                                this.mdfValor=Integer.parseInt(linea);
+                                System.out.println("VALOR: "+linea );
+                                linea=entrada.readLine();
+                                this.mdfAncho=Integer.parseInt(linea);
+                                System.out.println("ancho: "+linea );
+                                linea=entrada.readLine();
+                                this.mdfAlto=Integer.parseInt(linea);
+                                System.out.println("altoo: "+linea );
+                                linea=entrada.readLine();
+                                this.mdfPorcentaje=Integer.parseInt(linea);
+                                this.dificultad[0]=this.mdfPorcentaje-2000;
+                                this.dificultad[1]=this.mdfPorcentaje;
+                                this.dificultad[2]=this.mdfPorcentaje+2000;
+                                System.out.println("%: "+linea ); 
+                                linea=entrada.readLine();
+                                System.out.println("*: "+linea );
+                            }
+                        if(linea.equals("-") && entrada.ready()){
+                                linea = entrada.readLine();
+                                valor =entrada.readLine();
+                                System.out.println("-> : "+linea+"  "+valor);
+                                this.mate=new Material(linea,Integer.parseInt(valor));
+                                this.hashMAT.put(linea,this.mate);
+                        }
+                    }
+                    
+                   
+                }catch (IOException e) { 
+                    } 
+                    finally{ 
+                        try{ 
+                            entrada.close(); 
+                        }
+                        catch(IOException e1){} 
+                    } 
+                this.updateListas();
+    }
+    
+    public void inicializarTXTMateriales(){
           try {
+            System.out.println("Iniciando txt MATERIALES");
             File file = new File("Materiales/Materiales.txt");
             file.delete();
             // Si el archivo no existe es creado
@@ -122,20 +203,16 @@ public final class Interfaz extends javax.swing.JFrame {
                         bw.write(String.valueOf(this.mdfPorcentaje));
                         bw.newLine();
                         bw.write("*");
-                        bw.newLine();
-                        bw.write("-");//el guion carga material
-                        bw.newLine();
-                        bw.write("MDF");//
-                        bw.newLine();
-                        bw.write("#");//
-                        bw.newLine();
                         bw.close();
               }
             } catch (IOException e) {
             }
-          
     }
-    public void reescribirTXT(){
+    
+  
+    
+    public void crearTXTMateriales(){
+        this.updateListas();
           try {
             File aux = new File("Materiales/Materiales.txt");
             aux.delete();
@@ -158,67 +235,116 @@ public final class Interfaz extends javax.swing.JFrame {
                         bw.write("*");
                         bw.newLine();
                         bw.write("/");
-                            for(int l=0;l<this.listaMateriales.size();l++){
-                                    bw.newLine();
-                                    bw.write("-");
-                                    System.out.println("material "+this.listaMateriales.get(l));
-                                    bw.newLine();
-                                    bw.write(this.listaMateriales.get(l));//nombre
-                                    bw.newLine();
-                                    bw.write(String.valueOf(this.hashMAT.get(this.listaMateriales.get(l))));//valor
-                            }
-                            //EScribiendo MDF
-                            System.out.println("ESCRIBIENDO MDF");
-                            bw.newLine();
-                            bw.write("MDF");
-                            bw.newLine();
-                            bw.write("#");
-                            for(int l=0;l<this.listaMDF.size();l++){
-                                    bw.newLine();
-                                    bw.write(this.listaMDF.get(l));//nombre
-                                    bw.newLine();
-                                    bw.write(String.valueOf(this.hashMDF.get(this.listaMDF.get(l))));//valor
-                                    bw.newLine();
-                                    if(l!=this.listaMDF.size()-1){
-                                        bw.write("#");
-                                    }
-                                    
+                        for(int l=0;l<this.hashMAT.size();l++){
+                                bw.newLine();
+                                bw.write("-");
+                                bw.newLine();
+                                Material auxMAT=this.hashMAT.get(this.listaMateriales.get(l));
+                                bw.write(auxMAT.getNombre());//nombre
+                                bw.newLine();
+                                bw.write(String.valueOf(auxMAT.getPrecio()));//valor
                             }
                         bw.close();
               }
             } catch (IOException e) {
             }
           System.out.println("TXT ACTUALIZADO");
+          this.importarMDF();
     }
-    //importa datos del txt o lo crea
-    public void operarTxT() throws IOException {
-        
-        final File mate = new File("Materiales");
-        for (final File ficheroEntrada : mate.listFiles()) {
-            if (ficheroEntrada.isFile() && "Materiales.txt".equals(ficheroEntrada.getName())) {
-                if(this.update==true){
-                    this.updateListas();
-                    this.reescribirTXT();
-                    this.setTablasMateriales();
-                    this.update=false;
-                    System.out.println("UPDATE COMPLETE");
-                }
-                if(this.load=true){
-                    this.importarDatosTxT(ficheroEntrada);
-                    this.updateListas();
-                    this.setTablasMateriales();
-                    this.setTablaMDF();
-                    this.load=false;
-                    System.out.println("LOAD COMPLETE");
-                }
-                
-            }
-            else{
-                this.inicializarTXT();
-            }
+    
+
+    public void importarMDF(){
+        System.out.println("Operando MDF");
+        final File emedf = new File("MDF/MDF.txt");
+        if(emedf.exists()){
+            System.out.println("Importand!");
+            this.importarDatosMDF(emedf);
+            this.setTablasMateriales(); 
+            this.setTablaMDF();
+            System.out.println("Importado ok");
+        }else{
+            System.out.println("NAda que cargar");
         }
     }
-
+    public void crearTXTMDf(){
+          this.updateListas();
+          try {
+            File aux = new File("MDF/MDF.txt");
+            aux.delete();
+            File file = new File("MDF/MDF.txt");
+            FileWriter fw = new FileWriter(file);
+            System.out.println("creando TXT MDF");
+            try (BufferedWriter bw = new BufferedWriter(fw)) {
+                        for(int l=0;l<this.hashMDF.size();l++){
+                                bw.write("-");
+                                bw.newLine();
+                                this.mdf=this.hashMDF.get(this.listaMDF.get(l));
+                                bw.write(this.mdf.getNombre());//nombre
+                                bw.newLine();
+                                bw.write(String.valueOf(this.mdf.getPrecio()));//precio
+                                bw.newLine();
+                                bw.write(String.valueOf(this.mdf.getValArea()));//val area
+                                bw.newLine();
+                                bw.write(String.valueOf(this.mdf.getAlto()));//alto
+                                bw.newLine();
+                                bw.write(String.valueOf(this.mdf.getAncho()));//valor
+                                bw.newLine();
+                            }
+                        bw.close();
+              }
+            } catch (IOException e) {
+            }
+          this.importarMDF();
+          System.out.println("TXT MDF CREADO");
+    }
+    
+    public void importarDatosMDF(File f){
+        BufferedReader entrada = null; 
+                try { 
+                    entrada = new BufferedReader( new FileReader( f ) ); 
+                    String linea;
+                    this.hashMDF=new HashMap<>();
+                    this.mdf=new MDF();
+                    while(entrada.ready()){ 
+                        linea = entrada.readLine();
+                        if(linea.equals("-")){
+                                //nombre precio val alto ancho
+                                linea=entrada.readLine();
+                                this.mdf.setNombre(linea);
+                                linea=entrada.readLine();
+                                this.mdf.setPrecio(Integer.parseInt(linea));
+                                linea=entrada.readLine();
+                                this.mdf.setValArea(Integer.parseInt(linea));
+                                linea=entrada.readLine();
+                                this.mdf.setAlto(Integer.parseInt(linea));
+                                linea=entrada.readLine();
+                                this.mdf.setAncho(Integer.parseInt(linea));
+                                this.hashMDF.put(this.mdf.nombre,this.mdf);
+                            }
+                    }
+                   
+                }catch (IOException e) { 
+                    } 
+                    finally{ 
+                        try{ 
+                            entrada.close(); 
+                        }
+                        catch(IOException e1){} 
+                    } 
+                this.updateListas();
+    }
+    
+    public void reescribirMateriales() {
+        this.crearTXTMateriales();
+        this.setTablasMateriales();
+        System.out.println("UPDATE Materiales COMPLETE");
+    }
+    
+    public void reescribirMDF() {
+        //this.reescribirTXTMDF();
+        this.setTablasMateriales();
+        System.out.println("UPDATE MDF COMPLETE");
+    }
     public void calcularTotal(){
         if(!"".equals(this.porcentajeGanancia.getText())){
             //System.out.println("TOTAL 1: "+this.total);
@@ -230,21 +356,18 @@ public final class Interfaz extends javax.swing.JFrame {
             int gananciatotal=0;
             System.out.println("MDF LISTA: "+this.listaMDF);
             System.out.println("MAT LISTA: "+this.listaMateriales);
-            hashUtilizados.entrySet().forEach((Map.Entry<String, Integer[]> entry) -> {
-                this.datos=this.hashUtilizados.get(entry.getKey());
-                
-                
-                if(this.datos[2]==1){
-                    //this.datos=this.materialesUtilizados.get(entry.getKey());
+            hashUtilizados.entrySet().forEach((Map.Entry<String, Object> entry) -> {
+                if(entry.getValue() instanceof Material){
                     this.valorMateriales+=this.datos[0];
                     System.out.println(" Sumando MATERIAL: "+entry.getKey()+" "+this.datos[0]);
+                
                 }
-                 if(this.datos[2]==2){
-                    //this.datos=this.materialesUtilizados.get(entry.getKey());
+                if(entry.getValue() instanceof MDF){
+                     //this.datos=this.materialesUtilizados.get(entry.getKey());
                     this.totalMDF+=this.datos[0];
                     System.out.println("MDF EN ESPERA "+entry.getKey()+" "+this.datos[0]);
+                
                 }
-                //this.total+=datos[0];
                 
             });
             //Set inverdsion
@@ -281,72 +404,57 @@ public final class Interfaz extends javax.swing.JFrame {
         }
     
     }
-    public void importarDatosTxT(File f){
-        
-        BufferedReader entrada = null; 
-                try { 
-                    entrada = new BufferedReader( new FileReader( f ) ); 
-                    String linea;
-                    String valor;
-                    this.hashMAT=new HashMap<>();
-                    while(entrada.ready()){ 
-                        linea = entrada.readLine();
-                        
-                        if(linea.equals("*")){
-                                //sET lUZ
-                                linea=entrada.readLine();
-                                this.luz=Integer.parseInt(linea);
-                                //SET tablas luz
-                                this.visualMDFLuz.setText(linea);
-                                System.out.println("Luz: "+linea );
-                                linea=entrada.readLine();
-                                this.mdfValor=Integer.parseInt(linea);
-                                System.out.println("VALOR: "+linea );
-                                linea=entrada.readLine();
-                                this.mdfAncho=Integer.parseInt(linea);
-                                System.out.println("ancho: "+linea );
-                                linea=entrada.readLine();
-                                this.mdfAlto=Integer.parseInt(linea);
-                                System.out.println("altoo: "+linea );
-                                linea=entrada.readLine();
-                                this.mdfPorcentaje=Integer.parseInt(linea);
-                                this.dificultad[0]=this.mdfPorcentaje-2000;
-                                this.dificultad[1]=this.mdfPorcentaje;
-                                this.dificultad[2]=this.mdfPorcentaje+2000;
-                                System.out.println("%: "+linea ); 
-                                linea=entrada.readLine();
-                                System.out.println("*: "+linea );
-                                linea=entrada.readLine();
-                                System.out.println("-: "+linea );
+    
+    
+    public void crearTXTProducto(Producto p){
+         try {
+            File aux = new File("Productos/"+p.nombre+".txt");
+            aux.delete();
+            File file = new File("Productos/"+p.nombre+".txt");
+            FileWriter fw = new FileWriter(file);
+            System.out.println("CREANDO TXT PRODUCTO");
+            this.datos= new Integer[3];
+            try (BufferedWriter bw = new BufferedWriter(fw)) {
+                    bw.write(p.nombre);
+                    bw.newLine();
+                        for(int l=0;l<this.listaMateriales.size();l++){
+                                    bw.newLine();
+                                    bw.write(this.listaMateriales.get(l));
+                                    bw.newLine();
+                                    this.datos=p.hashMateriales.get(this.listaMateriales.get(l));
+                                     System.out.println("0"+this.datos[0]);
+                                      System.out.println("1"+this.datos[1]);
+                                       System.out.println("2"+this.datos[2]);
+                                    bw.write(String.valueOf(this.datos[0]));//valor
+                                    bw.newLine();
+                                    bw.write(String.valueOf(this.datos[1]));//cantidad
+                                    bw.newLine();
+                                    bw.write(String.valueOf(this.datos[2]));// 1 mat -- 2 MDF
+                                    bw.newLine();
+                                    bw.write("*");
                             }
-                        if(linea.equals("-") && entrada.ready()){
-                                linea = entrada.readLine();
-                                valor =entrada.readLine();
-                                System.out.println("-> : "+linea+"  "+valor); 
-                                this.hashMAT.put(linea,Integer.parseInt(valor));
-                        }
-                        if(linea.equals("MDF") && entrada.ready()){
-                                linea = entrada.readLine();
-                                System.out.println("CARGANDO MDF : "); 
-                        }
-                        if(linea.equals("#") && entrada.ready()){
-                                linea = entrada.readLine();
-                                valor =entrada.readLine();
-                                System.out.println("#> : "+linea+"  "+valor);
-                                this.hashMDF.put(linea,Integer.parseInt(valor));
-                        }
-                    }
-                    
-                   
-                }catch (IOException e) { 
-                    } 
-                    finally{ 
-                        try{ 
-                            entrada.close(); 
-                        }
-                        catch(IOException e1){} 
-                    } 
+                        bw.close();
+              }
+            } catch (IOException e) {
+            }
+          System.out.println("Producto creado");
     }
+    public void importarDatosProductos() throws IOException {
+        
+        final File product = new File("Productos");
+        for (final File ficheroEntrada : product.listFiles()) {
+            if (ficheroEntrada.isFile()) {
+                if(this.update==true){
+                    this.updateListas();
+                    //this.crearTXTProducto();
+                    this.update=false;
+                    System.out.println("UPDATE COMPLETE");
+                }
+                
+            }
+        }
+    }
+    
     public void calcularConsumoLuz(){
         int v=0;
         try {
@@ -366,45 +474,39 @@ public final class Interfaz extends javax.swing.JFrame {
         this.jMater3.setListData(listaVisualCompleta);
     }
     public void setearUsado(){
-        this.jMater1.setListData(lUsado);
+        this.jMater1.setListData(visualUsado);
     }
     public void setearTablasMDF(){
         //this.tablacontactosEditarLanchas.setListData(listadoClientes);
         this.jMater4.setListData(listaVisualCompleta);
         this.jMater5.setListData(ListaVisualCompletaPrecio);
         this.jMater3.setListData(listaVisualCompleta);
-        this.jMater1.setListData(lUPrecio);
+        this.jMater1.setListData(visualUsadoPrecio);
     }
     
-    
-    public void añadirGAsto(String nombre, Integer valor){
-        this.hashMAT.put(nombre, valor);
-        
-    }
        
     public void añadirUsado(){
         
         this.costo=0;
         this.cantidad=Integer.parseInt(jTextField3.getText());
         if(this.listaMateriales.contains(this.jMater4.getSelectedValue())){
-            this.costo=this.hashMAT.get(this.jMater4.getSelectedValue())*this.cantidad;
-            Integer valores[]= new Integer[3];
-            valores[0]=this.costo;
-            valores[1]=this.cantidad;
-            valores[2]=1;//MAERIAL 1
-            this.hashUtilizados.put(valores[1]+" "+this.jMater4.getSelectedValue()+" $"+valores[0], valores);
-            this.listaUsado.add(valores[1]+" "+this.jMater4.getSelectedValue()+" $"+valores[0]);
-            System.out.println("SE GUARDO MATERIAL: "+valores[1]+" "+this.jMater4.getSelectedValue()+" $"+valores[0]);
+            
+            this.mate=this.hashMAT.get(this.jMater4.getSelectedValue());
+            this.mate.setCantidad(this.cantidad);
+            this.hashUtilizados.put(this.mate.getNombreTabla(), this.mate);
+            this.listaUsado.add(this.mate.getNombreTabla());
+            System.out.println("SE GUARDO MATERIAL: "+this.mate.getdatos());
+            System.out.println("Original: "+this.hashMAT.get(this.jMater4.getSelectedValue()).getdatos());
+            
         }
         if(this.listaMDF.contains(this.jMater4.getSelectedValue())){
-            this.costo=this.hashMDF.get(this.jMater4.getSelectedValue())*this.cantidad;
-            Integer valores[]= new Integer[3];
-            valores[0]=this.costo;
-            valores[1]=this.cantidad;
-            valores[2]=2;// MDF 2
-            this.hashUtilizados.put(valores[1]+" "+this.jMater4.getSelectedValue()+" $"+valores[0], valores);
-            this.listaUsado.add(valores[1]+" "+this.jMater4.getSelectedValue()+" $"+valores[0]);
-            System.out.println("SE GUARDO MDF: "+valores[1]+" "+this.jMater4.getSelectedValue()+" $"+valores[0]);
+            //this.costo=this.hashMDF.get(this.jMater4.getSelectedValue())*this.cantidad;
+            this.mdf=this.hashMDF.get(this.jMater4.getSelectedValue());
+            this.mdf.setCantidad(this.cantidad);
+            this.hashUtilizados.put(this.mate.getNombreTabla(), this.mdf);
+            this.listaUsado.add(this.mdf.getNombreTabla());
+            System.out.println("SE GUARDO MATERIAL: "+this.mdf.getNombreTabla());
+            System.out.println("Original: "+this.hashMDF.get(this.jMater4.getSelectedValue()).getNombreTabla());
         }
         this.jTextField3.setText("");
         this.updateListaUsados();
@@ -413,12 +515,12 @@ public final class Interfaz extends javax.swing.JFrame {
     
     public void updateListaUsados(){
         
-        this.lUsado= new String[this.listaUsado.size()];
+        this.visualUsado= new String[this.listaUsado.size()];
             for (int i=0; i<listaUsado.size(); i++) {
-                 this.lUsado[i]=listaUsado.get(i);//lista de usados
+                 this.visualUsado[i]=listaUsado.get(i);//lista de usados
             }
 
-        this.jMater1.setListData(lUsado);
+        this.jMater1.setListData(visualUsado);
     }
         
     public void updateListas(){
@@ -427,23 +529,22 @@ public final class Interfaz extends javax.swing.JFrame {
         this.listaCompleta=new  ArrayList<>();
         this.listaCompletaPrecio=new  ArrayList<>();
         
-        this.hashMAT.entrySet().forEach((Map.Entry<String, Integer> entry) -> {
+        this.hashMAT.entrySet().forEach((Map.Entry<String, Material> entry) -> {
             this.listaMateriales.add(entry.getKey());
             this.listaCompleta.add(entry.getKey());
-            this.listaCompletaPrecio.add(entry.getKey()+":  $ "+this.hashMAT.get(entry.getKey()));
+            this.listaCompletaPrecio.add(entry.getKey()+":  $ "+this.hashMAT.get(entry.getKey()).precio);
             
         });
-        this.hashMDF.entrySet().forEach((Map.Entry<String, Integer> entry) -> {
+         this.hashMDF.entrySet().forEach((Map.Entry<String, MDF> entry) -> {
             this.listaMDF.add(entry.getKey());
             this.listaCompleta.add(entry.getKey());
-            this.listaCompletaPrecio.add(entry.getKey()+":  $ "+this.hashMDF.get(entry.getKey()));
+            this.listaCompletaPrecio.add(entry.getKey()+":  $ "+this.hashMDF.get(entry.getKey()).precio);
             
         });
         System.out.println("Lista Completa: "+this.listaCompleta.toString());
         System.out.println("Lista Precio completa: "+this.listaCompletaPrecio.toString());
         System.out.println("Lista Materiales : "+this.listaMateriales.toString());
 
-        System.out.println("Lista MDF: "+this.listaMDF.toString());
         
         this.listaVisualCompleta= new String[this.listaCompleta.size()];
         this.ListaVisualCompletaPrecio= new String[this.listaCompletaPrecio.size()];
@@ -490,15 +591,7 @@ public final class Interfaz extends javax.swing.JFrame {
         jLabel43 = new javax.swing.JLabel();
         jLabel30 = new javax.swing.JLabel();
         jLabel44 = new javax.swing.JLabel();
-        jPanel2 = new fondoPanel("met.jpg");
-        jLabel2 = new javax.swing.JLabel();
-        jButton5 = new javax.swing.JButton();
-        jTotal1 = new javax.swing.JLabel();
-        jLabel9 = new javax.swing.JLabel();
-        jTextField7 = new javax.swing.JTextField();
-        jScrollPane13 = new javax.swing.JScrollPane();
-        jMater6 = new javax.swing.JList<>();
-        jButton13 = new javax.swing.JButton();
+        jButton14 = new javax.swing.JButton();
         jTabbedPane2 = new javax.swing.JTabbedPane();
         lista = new fondoPanel("met.jpg");
         jScrollPane12 = new javax.swing.JScrollPane();
@@ -557,6 +650,13 @@ public final class Interfaz extends javax.swing.JFrame {
         jLabel15 = new javax.swing.JLabel();
         visualMDFLuz = new javax.swing.JTextField();
         jButton12 = new javax.swing.JButton();
+        jPanel2 = new fondoPanel("met.jpg");
+        jLabel2 = new javax.swing.JLabel();
+        jButton5 = new javax.swing.JButton();
+        jTotal1 = new javax.swing.JLabel();
+        jScrollPane13 = new javax.swing.JScrollPane();
+        jMater6 = new javax.swing.JList<>();
+        jButton13 = new javax.swing.JButton();
 
         jMenu1.setText("jMenu1");
 
@@ -728,6 +828,15 @@ public final class Interfaz extends javax.swing.JFrame {
         jLabel44.setBorder(javax.swing.BorderFactory.createEtchedBorder(javax.swing.border.EtchedBorder.RAISED));
         jLabel44.setOpaque(true);
 
+        jButton14.setIcon(new javax.swing.ImageIcon(getClass().getResource("/javaapplication2/save.png"))); // NOI18N
+        jButton14.setToolTipText("Guardar");
+        jButton14.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        jButton14.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton14ActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -754,30 +863,32 @@ public final class Interfaz extends javax.swing.JFrame {
                         .addGap(751, 751, 751))
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addComponent(porcentajeGanancia, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
-                            .addComponent(jLabel17, javax.swing.GroupLayout.DEFAULT_SIZE, 217, Short.MAX_VALUE)
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(jLabel36)
-                                .addGap(9, 9, 9)
-                                .addComponent(jLabel33, javax.swing.GroupLayout.PREFERRED_SIZE, 101, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addGroup(jPanel1Layout.createSequentialGroup()
-                                        .addComponent(jLabel39, javax.swing.GroupLayout.PREFERRED_SIZE, 109, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addGap(0, 0, Short.MAX_VALUE))
-                                    .addComponent(jLabel43, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                    .addComponent(jLabel32, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                    .addComponent(jLabel42, javax.swing.GroupLayout.DEFAULT_SIZE, 101, Short.MAX_VALUE)
-                                    .addComponent(jLabel41, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                    .addComponent(jLabel38, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
-                            .addComponent(jLabel21, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(jLabel20, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(jLabel30, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(jLabel44, javax.swing.GroupLayout.DEFAULT_SIZE, 217, Short.MAX_VALUE)
-                            .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jButton14, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                .addComponent(porcentajeGanancia, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
+                                .addComponent(jLabel17, javax.swing.GroupLayout.DEFAULT_SIZE, 217, Short.MAX_VALUE)
+                                .addGroup(jPanel1Layout.createSequentialGroup()
+                                    .addComponent(jLabel36)
+                                    .addGap(9, 9, 9)
+                                    .addComponent(jLabel33, javax.swing.GroupLayout.PREFERRED_SIZE, 101, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addGroup(jPanel1Layout.createSequentialGroup()
+                                            .addComponent(jLabel39, javax.swing.GroupLayout.PREFERRED_SIZE, 109, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                            .addGap(0, 0, Short.MAX_VALUE))
+                                        .addComponent(jLabel43, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                        .addComponent(jLabel32, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                        .addComponent(jLabel42, javax.swing.GroupLayout.DEFAULT_SIZE, 101, Short.MAX_VALUE)
+                                        .addComponent(jLabel41, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                        .addComponent(jLabel38, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                                .addComponent(jLabel21, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(jLabel20, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(jLabel30, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(jLabel44, javax.swing.GroupLayout.DEFAULT_SIZE, 217, Short.MAX_VALUE)
+                                .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)))
                         .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
         );
         jPanel1Layout.setVerticalGroup(
@@ -801,7 +912,7 @@ public final class Interfaz extends javax.swing.JFrame {
                                     .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
                                     .addComponent(jLabel4, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE))
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                                     .addGroup(jPanel1Layout.createSequentialGroup()
                                         .addComponent(jLabel17, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
@@ -831,11 +942,12 @@ public final class Interfaz extends javax.swing.JFrame {
                                         .addGap(18, 18, 18)
                                         .addComponent(jLabel30, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                        .addComponent(jLabel44, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                        .addComponent(jScrollPane11, javax.swing.GroupLayout.DEFAULT_SIZE, 482, Short.MAX_VALUE)
-                                        .addComponent(jScrollPane8)))))
-                        .addGap(0, 86, Short.MAX_VALUE))
+                                        .addComponent(jLabel44, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                        .addComponent(jButton14, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                    .addComponent(jScrollPane11)
+                                    .addComponent(jScrollPane8))))
+                        .addGap(0, 83, Short.MAX_VALUE))
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGap(0, 0, Short.MAX_VALUE)
                         .addComponent(jTotal)))
@@ -843,106 +955,6 @@ public final class Interfaz extends javax.swing.JFrame {
         );
 
         jTabbedPane1.addTab("CALCULADORA  ", new javax.swing.ImageIcon(getClass().getResource("/javaapplication2/calcular.png")), jPanel1); // NOI18N
-
-        jPanel2.setBackground(new java.awt.Color(95, 158, 160));
-
-        jLabel2.setBackground(new java.awt.Color(255, 255, 255));
-        jLabel2.setFont(new java.awt.Font("SansSerif", 1, 18)); // NOI18N
-        jLabel2.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        jLabel2.setText("LISTA MATERIALES");
-
-        jButton5.setFont(new java.awt.Font("Palatino Linotype", 2, 14)); // NOI18N
-        jButton5.setIcon(new javax.swing.ImageIcon(getClass().getResource("/javaapplication2/fd.png"))); // NOI18N
-        jButton5.setToolTipText("Ingresar");
-        jButton5.setAlignmentY(0.0F);
-        jButton5.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
-        jButton5.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        jButton5.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton5ActionPerformed(evt);
-            }
-        });
-
-        jLabel9.setBackground(new java.awt.Color(255, 255, 255));
-        jLabel9.setFont(new java.awt.Font("Tahoma", 1, 18)); // NOI18N
-        jLabel9.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        jLabel9.setText("N°");
-        jLabel9.setVerticalAlignment(javax.swing.SwingConstants.TOP);
-
-        jTextField7.setBackground(new java.awt.Color(255, 255, 204));
-        jTextField7.setFont(new java.awt.Font("Tahoma", 1, 18)); // NOI18N
-        jTextField7.setHorizontalAlignment(javax.swing.JTextField.CENTER);
-        jTextField7.setBorder(new javax.swing.border.LineBorder(new java.awt.Color(0, 0, 0), 2, true));
-
-        jMater6.setBackground(new java.awt.Color(255, 255, 204));
-        jMater6.setBorder(javax.swing.BorderFactory.createEtchedBorder(javax.swing.border.EtchedBorder.RAISED));
-        jMater6.setFont(new java.awt.Font("SansSerif", 1, 16)); // NOI18N
-        jMater6.setModel(new javax.swing.AbstractListModel<String>() {
-            String[] strings = {};
-            public int getSize() { return strings.length; }
-            public String getElementAt(int i) { return strings[i]; }
-        });
-        jMater6.setSelectionBackground(new java.awt.Color(153, 153, 153));
-        jScrollPane13.setViewportView(jMater6);
-
-        jButton13.setFont(new java.awt.Font("Palatino Linotype", 2, 14)); // NOI18N
-        jButton13.setIcon(new javax.swing.ImageIcon(getClass().getResource("/javaapplication2/delete.png"))); // NOI18N
-        jButton13.setToolTipText("Eliminar");
-        jButton13.setAlignmentY(0.0F);
-        jButton13.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
-        jButton13.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton13ActionPerformed(evt);
-            }
-        });
-
-        javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
-        jPanel2.setLayout(jPanel2Layout);
-        jPanel2Layout.setHorizontalGroup(
-            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel2Layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jLabel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jScrollPane13, javax.swing.GroupLayout.DEFAULT_SIZE, 325, Short.MAX_VALUE))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jButton5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jButton13, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jTextField7, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel9, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(jTotal1, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(751, 751, 751))
-        );
-        jPanel2Layout.setVerticalGroup(
-            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel2Layout.createSequentialGroup()
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel2Layout.createSequentialGroup()
-                        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel2Layout.createSequentialGroup()
-                                .addGap(73, 73, 73)
-                                .addComponent(jLabel9)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addComponent(jTextField7, javax.swing.GroupLayout.PREFERRED_SIZE, 34, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(18, 18, 18)
-                                .addComponent(jButton5)
-                                .addGap(18, 18, 18)
-                                .addComponent(jButton13, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel2Layout.createSequentialGroup()
-                                .addContainerGap()
-                                .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jScrollPane13, javax.swing.GroupLayout.PREFERRED_SIZE, 484, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                        .addGap(0, 84, Short.MAX_VALUE))
-                    .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addGap(0, 0, Short.MAX_VALUE)
-                        .addComponent(jTotal1)))
-                .addContainerGap())
-        );
-
-        jTabbedPane1.addTab("PRODUCTOS  ", new javax.swing.ImageIcon(getClass().getResource("/javaapplication2/caja.png")), jPanel2, ""); // NOI18N
 
         jTabbedPane2.setBackground(new java.awt.Color(8, 69, 84));
         jTabbedPane2.setForeground(new java.awt.Color(242, 242, 242));
@@ -1136,15 +1148,15 @@ public final class Interfaz extends javax.swing.JFrame {
                             .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 70, javax.swing.GroupLayout.PREFERRED_SIZE))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(editarLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel16, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addGroup(editarLayout.createSequentialGroup()
-                                .addGap(0, 0, Short.MAX_VALUE)
-                                .addGroup(editarLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(jButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, 346, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                            .addGroup(editarLayout.createSequentialGroup()
-                                .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 346, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(0, 0, Short.MAX_VALUE)))))
+                            .addComponent(jButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addGroup(editarLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                .addComponent(jLabel16, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addGroup(editarLayout.createSequentialGroup()
+                                    .addGap(0, 0, Short.MAX_VALUE)
+                                    .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, 346, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addGroup(editarLayout.createSequentialGroup()
+                                    .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 346, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addGap(0, 0, Short.MAX_VALUE))))))
                 .addContainerGap(156, Short.MAX_VALUE))
         );
         editarLayout.setVerticalGroup(
@@ -1174,7 +1186,7 @@ public final class Interfaz extends javax.swing.JFrame {
                         .addGroup(editarLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                             .addComponent(jLabel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addGap(94, 94, 94)
                         .addComponent(jButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(editarLayout.createSequentialGroup()
                         .addComponent(jLabel19)
@@ -1185,7 +1197,7 @@ public final class Interfaz extends javax.swing.JFrame {
                                 .addGap(180, 180, 180)
                                 .addComponent(jButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE))
                             .addComponent(jScrollPane10, javax.swing.GroupLayout.PREFERRED_SIZE, 451, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(88, Short.MAX_VALUE))
         );
 
         jTabbedPane2.addTab("EDITAR/AGREGAR/ELIMINAR", editar);
@@ -1559,6 +1571,87 @@ public final class Interfaz extends javax.swing.JFrame {
 
         jTabbedPane1.addTab("MATERIALES  ", new javax.swing.ImageIcon(getClass().getResource("/javaapplication2/mat.png")), jTabbedPane2); // NOI18N
 
+        jPanel2.setBackground(new java.awt.Color(95, 158, 160));
+
+        jLabel2.setBackground(new java.awt.Color(255, 255, 255));
+        jLabel2.setFont(new java.awt.Font("SansSerif", 1, 18)); // NOI18N
+        jLabel2.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        jLabel2.setText("LISTA PRODUCTOS");
+
+        jButton5.setFont(new java.awt.Font("Palatino Linotype", 2, 14)); // NOI18N
+        jButton5.setIcon(new javax.swing.ImageIcon(getClass().getResource("/javaapplication2/fd.png"))); // NOI18N
+        jButton5.setToolTipText("Ingresar");
+        jButton5.setAlignmentY(0.0F);
+        jButton5.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        jButton5.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        jButton5.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton5ActionPerformed(evt);
+            }
+        });
+
+        jMater6.setBackground(new java.awt.Color(255, 255, 204));
+        jMater6.setBorder(javax.swing.BorderFactory.createEtchedBorder(javax.swing.border.EtchedBorder.RAISED));
+        jMater6.setFont(new java.awt.Font("SansSerif", 1, 16)); // NOI18N
+        jMater6.setModel(new javax.swing.AbstractListModel<String>() {
+            String[] strings = {};
+            public int getSize() { return strings.length; }
+            public String getElementAt(int i) { return strings[i]; }
+        });
+        jMater6.setSelectionBackground(new java.awt.Color(153, 153, 153));
+        jScrollPane13.setViewportView(jMater6);
+
+        jButton13.setFont(new java.awt.Font("Palatino Linotype", 2, 14)); // NOI18N
+        jButton13.setIcon(new javax.swing.ImageIcon(getClass().getResource("/javaapplication2/delete.png"))); // NOI18N
+        jButton13.setToolTipText("Eliminar");
+        jButton13.setAlignmentY(0.0F);
+        jButton13.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        jButton13.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton13ActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
+        jPanel2.setLayout(jPanel2Layout);
+        jPanel2Layout.setHorizontalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(jLabel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jScrollPane13, javax.swing.GroupLayout.DEFAULT_SIZE, 325, Short.MAX_VALUE))
+                .addGap(18, 18, 18)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(jButton5, javax.swing.GroupLayout.DEFAULT_SIZE, 40, Short.MAX_VALUE)
+                    .addComponent(jButton13, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(jTotal1, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(751, 751, 751))
+        );
+        jPanel2Layout.setVerticalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel2Layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(jPanel2Layout.createSequentialGroup()
+                                .addComponent(jButton5)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(jButton13, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(jScrollPane13, javax.swing.GroupLayout.PREFERRED_SIZE, 484, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGap(0, 84, Short.MAX_VALUE))
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addGap(0, 0, Short.MAX_VALUE)
+                        .addComponent(jTotal1)))
+                .addContainerGap())
+        );
+
+        jTabbedPane1.addTab("PRODUCTOS  ", new javax.swing.ImageIcon(getClass().getResource("/javaapplication2/caja.png")), jPanel2, ""); // NOI18N
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -1586,23 +1679,13 @@ public final class Interfaz extends javax.swing.JFrame {
     private void jButton6ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton6ActionPerformed
             System.out.println("1");
         if(!"".equals(this.jTextField4.getText()) && !"".equals(this.jTextField6.getText())){
-            System.out.println("-------");
             System.out.println("Añadiendo: "+ this.jTextField6.getText()+"Valor: "+this.jTextField4.getText());
-            this.hashMAT.put(this.jTextField6.getText(), Integer.parseInt(this.jTextField4.getText()));
+            Material mat=new Material(this.jTextField6.getText(),Integer.parseInt(this.jTextField4.getText()));
+            this.hashMAT.put(this.jTextField6.getText(), mat);
             this.jTextField6.setText("");
             this.jTextField4.setText("");
-           try {
-                update=true;
-                //this.updateListas();
-                //this.setTablasMateriales();
-                //this.reescribirTXT();
-                System.out.println("update: "+this.update+ "Load: "+this.load);
-                this.operarTxT();
-                
-                //JOptionPane.showMessageDialog(null,"Agregado con exito");
-            } catch (IOException ex) {
-                Logger.getLogger(Interfaz.class.getName()).log(Level.SEVERE, null, ex);
-            }  
+            this.reescribirMateriales();
+            //JOptionPane.showMessageDialog(null,"Agregado con exito");
            
         }
     }//GEN-LAST:event_jButton6ActionPerformed
@@ -1628,7 +1711,7 @@ public final class Interfaz extends javax.swing.JFrame {
         }
         this.updateListas();
         this.setTablasMateriales();
-        this.reescribirTXT();
+        this.crearTXTMateriales();
         
     }//GEN-LAST:event_botonBorrarActionPerformed
 
@@ -1639,19 +1722,22 @@ public final class Interfaz extends javax.swing.JFrame {
                 this.listaMateriales.remove(selected);
                 hashMAT.remove(selected);
                 selected="";
-                hashMAT.put(this.jTextField1.getText(), Integer.parseInt(this.jTextField2.getText()));
-                this.listaMateriales.add(this.jTextField1.getText());
+                Material mat=new Material(this.jTextField1.getText(),Integer.parseInt(this.jTextField2.getText()));
+                hashMAT.put(this.jTextField1.getText(), mat);
+                //this.listaMateriales.add(this.jTextField1.getText());
                 this.jTextField1.setText("");
                 this.jTextField2.setText("");
                 this.editMAT=false;
+                
             }
             if(this.editMDF==true){
                 System.out.println("selected mdf: "+this.selected);
                 this.listaMDF.remove(selected);
                 hashMDF.remove(selected);
                 selected="";
-                hashMDF.put(this.jTextField1.getText(), Integer.parseInt(this.jTextField2.getText()));
-                this.listaMDF.add(this.jTextField1.getText());
+                //MDF mdf=new MDF(this.jTextField1.getText(),this.jTextField2.getText()));
+                //hashMDF.put(, Integer.parseInt();
+                //this.listaMDF.add(this.jTextField1.getText());
                 this.jTextField1.setText("");
                 this.jTextField2.setText("");
                 this.editMDF=false;
@@ -1659,7 +1745,7 @@ public final class Interfaz extends javax.swing.JFrame {
             
             this.updateListas();
             this.setTablasMateriales();
-            this.reescribirTXT();
+            this.crearTXTMateriales();
             //JOptionPane.showMessageDialog(null,"Editado con exito");
         }
 
@@ -1668,21 +1754,20 @@ public final class Interfaz extends javax.swing.JFrame {
     private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
         if(this.jMater3.getSelectedValue()!=null){
             if(this.listaMateriales.contains(this.jMater3.getSelectedValue())){
+                this.mate=this.hashMAT.get(this.jMater3.getSelectedValue());
                 this.selected= this.jMater3.getSelectedValue();
                 System.out.println("SELECTED MAT: "+this.jMater3.getSelectedValue());
-                //this.selected=this.listaMateriales.get(this.jMater3.getSelectedIndex());
-                this.costo=this.hashMAT.get(selected);
                 jTextField1.setText(selected);
-                jTextField2.setText(String.valueOf(costo));//extraemos precio
+                jTextField2.setText(String.valueOf(mate.precio));//extraemos precio
                 this.editMAT=true;
                 
             }
             if(this.listaMDF.contains(this.jMater3.getSelectedValue())){
+                this.mdf=this.hashMDF.get(this.jMater3.getSelectedValue());
                 this.selected= this.jMater3.getSelectedValue();
                 System.out.println("SELECTED MDF: "+this.jMater3.getSelectedValue());
-                this.costo=this.hashMDF.get(selected);
                 jTextField1.setText(selected);
-                jTextField2.setText(String.valueOf(costo));//extraemos precio
+                jTextField2.setText(String.valueOf(mdf.precio));//extraemos precio
                 this.editMDF=true;
             }
             
@@ -1730,27 +1815,27 @@ public final class Interfaz extends javax.swing.JFrame {
         this.jLabel31.setText(this.visualMDFLuz.getText());
         this.updateListas();
         this.setTablasMateriales();
-        this.reescribirTXT();
+        this.crearTXTMateriales();
         JOptionPane.showMessageDialog(null,"Editado con exito");
     }//GEN-LAST:event_jButton12ActionPerformed
 
     private void jButton11ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton11ActionPerformed
         if(!"".equals(this.inputAlto.getText()) && !"".equals(this.inputAncho.getText())){
-            System.out.println("EL MDF VALE: $ "+this.valorMdfGanancia+this.consumoLuz);
-            this.hashMDF.put("MDF "+this.inputAlto.getText()+" X "+this.inputAncho.getText(), this.valorMdfGanancia+this.consumoLuz);
-            this.listaMDF.add("MDF "+this.inputAlto.getText()+" X "+this.inputAncho.getText());
-            
+            System.out.println("EL MDF VALE: $ "+this.mdf.precio);
+            this.hashMDF.put(this.mdf.nombre, this.mdf);
+            this.crearTXTMDf();
+            this.importarMDF();
             this.inputAlto.setText("");
             this.inputAncho.setText("");
             this.jTextField5.setText("");
             this.jLabel31.setText("");
             this.gananciaMDF.setText("");
             this.valorsegmento.setText("");
-
-            this.updateListas();
+            this.valorMDF.setText("");
+            this.visualInversion.setText("");
             this.setTablasMateriales();
-            this.reescribirTXT();
-            System.out.println("update: "+this.update+ "Load: "+this.load);
+            
+            //this.reescribirTXTMateriales();
           
             JOptionPane.showMessageDialog(null,"Agregado con exito");
         }
@@ -1818,6 +1903,9 @@ public final class Interfaz extends javax.swing.JFrame {
             //set visual producto
             this.valorsegmento.setText(Integer.toString(this.valorMdfGanancia+this.inversionCorte));
             
+            this.mdf=new MDF("MDF "+this.inputAlto.getText()+" X "+this.inputAncho.getText(),(this.valorMdfGanancia+this.inversionCorte),this.val, x1, y1);
+            
+            
         }
     }//GEN-LAST:event_jButton10ActionPerformed
 
@@ -1832,6 +1920,15 @@ public final class Interfaz extends javax.swing.JFrame {
     private void jButton13ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton13ActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_jButton13ActionPerformed
+
+    private void jButton14ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton14ActionPerformed
+        String nomb=JOptionPane.showInputDialog("Nombre del producto: ");
+        
+        //Producto p=new Producto(nomb,this.total,this.);
+        //this.crearTXTProducto(p);
+        //producto.visualizarMateriales();
+       
+    }//GEN-LAST:event_jButton14ActionPerformed
 
     /**
      * @param args the command line arguments
@@ -1884,6 +1981,7 @@ public final class Interfaz extends javax.swing.JFrame {
     private javax.swing.JButton jButton11;
     private javax.swing.JButton jButton12;
     private javax.swing.JButton jButton13;
+    private javax.swing.JButton jButton14;
     private javax.swing.JButton jButton2;
     private javax.swing.JButton jButton3;
     private javax.swing.JButton jButton4;
@@ -1934,7 +2032,6 @@ public final class Interfaz extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
     private javax.swing.JLabel jLabel8;
-    private javax.swing.JLabel jLabel9;
     public javax.swing.JList<String> jMater1;
     public javax.swing.JList<String> jMater3;
     public javax.swing.JList<String> jMater4;
@@ -1956,7 +2053,6 @@ public final class Interfaz extends javax.swing.JFrame {
     private javax.swing.JTextField jTextField4;
     private javax.swing.JTextField jTextField5;
     private javax.swing.JTextField jTextField6;
-    private javax.swing.JTextField jTextField7;
     private javax.swing.JLabel jTotal;
     private javax.swing.JLabel jTotal1;
     private javax.swing.JPanel lista;
